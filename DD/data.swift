@@ -563,7 +563,7 @@ public struct System: SWAData, Approvable {
 func parseLangText(_ langTextJSON: JSON) -> [String: String] {
     
     var returnCollection = [String: String]()
-    
+    825309825309
     for lang in SWALanguages {
         if let text = langTextJSON[lang].string {
             returnCollection[lang] = text
