@@ -1,4 +1,0 @@
-module memplugin {
-    umbrella "/Users/vasiliykharitonov/Library/Mobile Documents/com~apple~CloudDocs/DD/DD/.build/checkouts/omr-agentcore-1826539389957424207/src/memplugin/include"
-    export *
-}
