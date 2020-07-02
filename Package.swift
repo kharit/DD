@@ -1,20 +1,32 @@
-// swift-tools-version:4.0
+// swift-tools-version:5.2
 import PackageDescription
 
 let package = Package(
     name: "DD",
+    platforms: [
+       .macOS(.v10_15)
+    ],
     dependencies: [
-      .package(url: "https://github.com/IBM-Swift/Kitura.git", .upToNextMinor(from: "2.2.0")),
-      .package(url: "https://github.com/IBM-Swift/HeliumLogger.git", .upToNextMinor(from: "1.7.1")),
-      .package(url: "https://github.com/IBM-Swift/CloudEnvironment.git", from: "6.1.0"),
-      .package(url: "https://github.com/RuntimeTools/SwiftMetrics.git", from: "2.0.0"),
-      .package(url: "https://github.com/IBM-Swift/Health.git", from: "1.0.0"),
-      .package(url: "https://github.com/IBM-Swift/Kitura-CouchDB.git", from: "2.0.0"),
+        // 💧 A server-side Swift web framework.
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0")
     ],
     targets: [
-    .target(name: "DD", dependencies: [ .target(name: "Application"), "Kitura" , "HeliumLogger", "CouchDB"]),
-      .target(name: "Application", dependencies: [ "Kitura", "CloudEnvironment", "SwiftMetrics", "Health"]),
-
-      .testTarget(name: "ApplicationTests" , dependencies: [.target(name: "Application"), "Kitura","HeliumLogger" ])
+        .target(
+            name: "App",
+            dependencies: [
+                .product(name: "Vapor", package: "vapor")
+            ],
+            swiftSettings: [
+                // Enable better optimizations when building in Release configuration. Despite the use of
+                // the `.unsafeFlags` construct required by SwiftPM, this flag is recommended for Release
+                // builds. See <https://github.com/swift-server/guides#building-for-production> for details.
+                .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release))
+            ]
+        ),
+        .target(name: "Run", dependencies: [.target(name: "App")]),
+        .testTarget(name: "AppTests", dependencies: [
+            .target(name: "App"),
+            .product(name: "XCTVapor", package: "vapor"),
+        ])
     ]
 )

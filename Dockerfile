@@ -1,27 +1,41 @@
-FROM ibmcom/swift-ubuntu-runtime:4.0
-MAINTAINER IBM Swift Engineering at IBM Cloud
-LABEL Description="Template Dockerfile that extends the ibmcom/swift-ubuntu-runtime image."
+# ================================
+# Build image
+# ================================
+FROM swift:5.2-bionic as build
+WORKDIR /build
 
-# We can replace this port with what the user wants
-EXPOSE 8080
+# First just resolve dependencies.
+# This creates a cached layer that can be reused
+# as long as your Package.swift/Package.resolved
+# files do not change.
+COPY ./Package.* ./
+RUN swift package resolve
 
-# Default user if not provided
-ARG bx_dev_user=root
-ARG bx_dev_userid=1000
+# Copy entire repo into container
+COPY . .
 
-# Install system level packages
-# RUN apt-get update && apt-get dist-upgrade -y
+# Compile with optimizations
+RUN swift build --enable-test-discovery -c release
 
-# Add utils files
-ADD https://raw.githubusercontent.com/IBM-Swift/swift-ubuntu-docker/master/utils/run-utils.sh /swift-utils/run-utils.sh
-ADD https://raw.githubusercontent.com/IBM-Swift/swift-ubuntu-docker/master/utils/common-utils.sh /swift-utils/common-utils.sh
-RUN chmod -R 555 /swift-utils
+# ================================
+# Run image
+# ================================
+FROM swift:5.2-bionic-slim
 
-# Create user if not root
-RUN if [ $bx_dev_user != "root" ]; then useradd -ms /bin/bash -u $bx_dev_userid $bx_dev_user; fi
+# Create a vapor user and group with /app as its home directory
+RUN useradd --user-group --create-home --system --skel /dev/null --home-dir /app vapor
 
-# Bundle application source & binaries
-COPY . /swift-project
+# Switch to the new home directory
+WORKDIR /app
 
-# Command to start Swift application
-CMD [ "sh", "-c", "cd /swift-project && .build-ubuntu/release/DD" ]
+# Copy build artifacts
+COPY --from=build --chown=vapor:vapor /build/.build/release /app
+# Uncomment the next line if you need to load resources from the `Public` directory
+#COPY --from=build --chown=vapor:vapor /build/Public /app/Public
+
+# Ensure all further commands run as the vapor user
+USER vapor:vapor
+
+# Start the Vapor service when the image is run, default to listening on 8080 in production environment 
+ENTRYPOINT ["./Run"]
+CMD ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "8080"]
